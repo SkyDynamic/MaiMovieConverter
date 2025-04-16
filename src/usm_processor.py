@@ -64,7 +64,7 @@ def convert_ifv_to_mp4(ivf: str, output_dir: str):
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
         file_name = os.path.splitext(os.path.basename(ivf))[0]
-        subprocess.run(['ffmpeg', '-i', ivf, '-c:v', 'copy', '-c:a', 'copy', '-y', f"{output_dir}/{file_name}.mp4"],
+        subprocess.run(['ffmpeg', '-y', '-i', ivf, '-c:v', 'copy', '-c:a', 'copy', f"{output_dir}/{file_name}.mp4"],
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     else:
         __print_ffmpeg_not_installed()
@@ -96,11 +96,11 @@ def convert_mp4_to_h264(mp4: str):
             return
         
         command = [
-            'ffmpeg', '-i', mp4, '-progress', '-y', f"temps/{file_name}.264"
+            'ffmpeg', '-y', '-i', mp4, f"temps/{file_name}.264"
         ]
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
         
-        with tqdm(total=total_frames, unit='frame', desc=f"Converting {file_name} to IVF") as pbar:
+        with tqdm(total=total_frames, unit='frame', desc=f"Converting {file_name} to h264") as pbar:
             while process.poll() is None:
                 output = process.stdout.readline()
                 if output.strip().startswith('frame='):
@@ -116,7 +116,7 @@ def convert_mp4_to_h264(mp4: str):
 def convert_mp4_to_ivf_without_progress(mp4: str):
     file_name = os.path.splitext(os.path.basename(mp4))[0]
     command = [
-        'ffmpeg', '-i', mp4,
+        'ffmpeg', '-y', '-i', mp4,
         '-pix_fmt', 'yuv420p10le', '-c:v', 'libvpx-vp9', '-b:v', '0', '-crf', '31', '-speed', '1', '-quality', 'good',
         '-static-thresh', '4', '-lag-in-frames', '25', '-f', 'ivf',
         f"temps/{file_name}.ivf"
