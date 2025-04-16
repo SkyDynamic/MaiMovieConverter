@@ -92,11 +92,24 @@ def convert_mp4_to_h264(mp4: str):
         total_frames = get_total_frames(mp4)
         if total_frames is None:
             print(f"Could not determine total frames for {mp4}. Falling back to non-progress bar conversion.")
-            convert_mp4_to_ivf_without_progress(mp4)
+            convert_mp4_to_h264_without_progress(mp4)
             return
         
         command = [
-            'ffmpeg', '-y', '-i', mp4, f"temps/{file_name}.264"
+            'ffprobe', '-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=height',
+            '-of', 'default=nokey=1:noprint_wrappers=1', mp4
+        ]
+        try:
+            result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True, check=True)
+            height = int(result.stdout.strip())
+            if height % 2 != 0:
+                height -= 1
+        except subprocess.CalledProcessError as e:
+            print(f"Error getting video height: {e}")
+            height = 606
+        
+        command = [
+            'ffmpeg', '-y', '-i', mp4, '-vf', f'scale=1080:{height}', f"temps/{file_name}.264"
         ]
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
         
@@ -113,13 +126,24 @@ def convert_mp4_to_h264(mp4: str):
         __print_ffmpeg_not_installed()
 
 
-def convert_mp4_to_ivf_without_progress(mp4: str):
+def convert_mp4_to_h264_without_progress(mp4: str):
     file_name = os.path.splitext(os.path.basename(mp4))[0]
+    
     command = [
-        'ffmpeg', '-y', '-i', mp4,
-        '-pix_fmt', 'yuv420p10le', '-c:v', 'libvpx-vp9', '-b:v', '0', '-crf', '31', '-speed', '1', '-quality', 'good',
-        '-static-thresh', '4', '-lag-in-frames', '25', '-f', 'ivf',
-        f"temps/{file_name}.ivf"
+        'ffprobe', '-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=height',
+        '-of', 'default=nokey=1:noprint_wrappers=1', mp4
+    ]
+    try:
+        result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True, check=True)
+        height = int(result.stdout.strip())
+        if height % 2 != 0:
+            height -= 1
+    except subprocess.CalledProcessError as e:
+        print(f"Error getting video height: {e}")
+        height = 606
+    
+    command = [
+        'ffmpeg', '-y', '-i', mp4, '-vf', f'scale=1080:{height}', f"temps/{file_name}.264"
     ]
     subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
